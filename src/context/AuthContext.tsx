@@ -9,6 +9,9 @@ interface AuthContextType {
   login: (email: string, password?: string) => Promise<void>;
   register: (email: string, password?: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
+  resetPasswordByEmail: (email: string) => Promise<{ message: string }>;
+  resetPasswordByPhone: (phone: string) => Promise<{ message: string }>;
+  verifyPhoneOtp: (phone: string, token: string, newPassword: string) => Promise<{ message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,19 +32,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (!isSupabaseClientConfigured || !supabase) {
-      // Default to demo session for instant usability
-      const stored = localStorage.getItem('ai_resume_demo_user');
+      const stored = localStorage.getItem('ai_resume_active_user');
       if (stored) {
         setUser(JSON.parse(stored));
       } else {
-        setUser(DEMO_USER);
-        localStorage.setItem('ai_resume_demo_user', JSON.stringify(DEMO_USER));
+        setUser(null);
       }
       setLoading(false);
       return;
     }
 
-    // Supabase auth subscription
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({
@@ -75,13 +75,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password?: string) => {
     if (!isSupabaseClientConfigured || !supabase) {
-      const demoUser: UserProfile = {
+      const storedAccounts = JSON.parse(localStorage.getItem('ai_resume_registered_users') || '[]');
+      const found = storedAccounts.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+
+      if (!found && email !== DEMO_USER.email) {
+        throw new Error('Account not found. Please Sign Up before signing in.');
+      }
+
+      const activeUser: UserProfile = found || {
         ...DEMO_USER,
         email,
         fullName: email.split('@')[0],
       };
-      setUser(demoUser);
-      localStorage.setItem('ai_resume_demo_user', JSON.stringify(demoUser));
+      setUser(activeUser);
+      localStorage.setItem('ai_resume_active_user', JSON.stringify(activeUser));
       return;
     }
 
@@ -90,7 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password: password || 'Password123!',
     });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Invalid email or password. Please check your credentials or Sign Up.');
+    }
   };
 
   const register = async (email: string, password?: string, fullName?: string) => {
@@ -101,8 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fullName: fullName || email.split('@')[0],
         jobTitle: 'Software Professional',
       };
+      const storedAccounts = JSON.parse(localStorage.getItem('ai_resume_registered_users') || '[]');
+      storedAccounts.push(newUser);
+      localStorage.setItem('ai_resume_registered_users', JSON.stringify(storedAccounts));
+
       setUser(newUser);
-      localStorage.setItem('ai_resume_demo_user', JSON.stringify(newUser));
+      localStorage.setItem('ai_resume_active_user', JSON.stringify(newUser));
       return;
     }
 
@@ -122,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     if (!isSupabaseClientConfigured || !supabase) {
       setUser(null);
-      localStorage.removeItem('ai_resume_demo_user');
+      localStorage.removeItem('ai_resume_active_user');
       return;
     }
 
@@ -130,8 +143,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const resetPasswordByEmail = async (email: string) => {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, method: 'email' }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send email password reset link.');
+    return data;
+  };
+
+  const resetPasswordByPhone = async (phone: string) => {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, method: 'phone' }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send SMS OTP code.');
+    return data;
+  };
+
+  const verifyPhoneOtp = async (phone: string, token: string, newPassword: string) => {
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, token, newPassword }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to verify OTP code.');
+    return data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, isDemo, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isDemo,
+        login,
+        register,
+        logout,
+        resetPasswordByEmail,
+        resetPasswordByPhone,
+        verifyPhoneOtp,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
