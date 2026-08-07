@@ -10,10 +10,31 @@ import {
   ArrowRight, 
   AlertCircle, 
   CheckCircle2, 
-  KeyRound, 
   ShieldAlert,
-  ArrowLeft
+  ArrowLeft,
+  Globe
 } from 'lucide-react';
+
+const COUNTRY_CODES = [
+  { code: '+1', country: 'United States / Canada 🇺🇸 🇨🇦' },
+  { code: '+91', country: 'India 🇮🇳' },
+  { code: '+44', country: 'United Kingdom 🇬🇧' },
+  { code: '+61', country: 'Australia 🇦🇺' },
+  { code: '+49', country: 'Germany 🇩🇪' },
+  { code: '+33', country: 'France 🇫🇷' },
+  { code: '+81', country: 'Japan 🇯🇵' },
+  { code: '+971', country: 'United Arab Emirates 🇦🇪' },
+  { code: '+65', country: 'Singapore 🇸🇬' },
+  { code: '+86', country: 'China 🇨🇳' },
+  { code: '+55', country: 'Brazil 🇧🇷' },
+  { code: '+27', country: 'South Africa 🇿🇦' },
+  { code: '+34', country: 'Spain 🇪🇸' },
+  { code: '+39', country: 'Italy 🇮🇹' },
+  { code: '+7', country: 'Russia / Kazakhstan 🇷🇺' },
+  { code: '+82', country: 'South Korea 🇰🇷' },
+  { code: '+52', country: 'Mexico 🇲🇽' },
+  { code: '+966', country: 'Saudi Arabia 🇸🇦' },
+];
 
 export const AuthPage: React.FC = () => {
   const location = useLocation();
@@ -31,7 +52,8 @@ export const AuthPage: React.FC = () => {
   // Forgot password fields
   const [recoveryMethod, setRecoveryMethod] = useState<'email' | 'phone'>('email');
   const [recoveryEmail, setRecoveryEmail] = useState('');
-  const [recoveryPhone, setRecoveryPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+1');
+  const [rawPhone, setRawPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -39,6 +61,8 @@ export const AuthPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const fullPhoneNumber = `${countryCode}${rawPhone.trim().replace(/^[+0]+/, '')}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +95,7 @@ export const AuthPage: React.FC = () => {
     try {
       if (recoveryMethod === 'email') {
         if (!recoveryEmail) {
-          setErrorMsg('Please enter the email address linked to your account.');
+          setErrorMsg('Please enter your email address.');
           setSubmitting(false);
           return;
         }
@@ -79,12 +103,12 @@ export const AuthPage: React.FC = () => {
         setSuccessMsg(res.message);
       } else {
         if (!otpSent) {
-          if (!recoveryPhone) {
-            setErrorMsg('Please enter the phone number linked to your account.');
+          if (!rawPhone.trim()) {
+            setErrorMsg('Please enter your phone number.');
             setSubmitting(false);
             return;
           }
-          const res = await resetPasswordByPhone(recoveryPhone);
+          const res = await resetPasswordByPhone(fullPhoneNumber);
           setSuccessMsg(res.message);
           setOtpSent(true);
         } else {
@@ -93,7 +117,7 @@ export const AuthPage: React.FC = () => {
             setSubmitting(false);
             return;
           }
-          const res = await verifyPhoneOtp(recoveryPhone, otpCode, newPassword);
+          const res = await verifyPhoneOtp(fullPhoneNumber, otpCode, newPassword);
           setSuccessMsg(res.message);
           setTimeout(() => {
             setMode('login');
@@ -137,7 +161,7 @@ export const AuthPage: React.FC = () => {
           </h2>
           <p className="text-xs text-slate-400">
             {mode === 'forgot'
-              ? 'Recover access using your linked email or phone number'
+              ? 'Recover access using your email or phone number'
               : mode === 'register'
               ? 'Sign up to access AI resume tools & ATS optimization'
               : 'Enter your credentials to log in'}
@@ -199,7 +223,7 @@ export const AuthPage: React.FC = () => {
                 }`}
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>Linked Email</span>
+                <span>Mail</span>
               </button>
 
               <button
@@ -217,13 +241,13 @@ export const AuthPage: React.FC = () => {
                 }`}
               >
                 <Phone className="w-3.5 h-3.5" />
-                <span>Linked Phone</span>
+                <span>Phone</span>
               </button>
             </div>
 
             {recoveryMethod === 'email' ? (
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Linked Email Address</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
@@ -239,18 +263,33 @@ export const AuthPage: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Linked Phone Number</label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                    <input
-                      type="tel"
-                      required
-                      value={recoveryPhone}
-                      onChange={(e) => setRecoveryPhone(e.target.value)}
-                      placeholder="+1234567890"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"
-                    />
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Worldwide International)</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="w-1/3 py-2.5 px-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code} className="bg-slate-900 text-slate-200">
+                          {c.code} ({c.country})
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="relative flex-1">
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <input
+                        type="tel"
+                        required
+                        value={rawPhone}
+                        onChange={(e) => setRawPhone(e.target.value)}
+                        placeholder="1234567890"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
                   </div>
+                  <p className="text-[10px] text-slate-500 mt-1">Full international format: {fullPhoneNumber}</p>
                 </div>
 
                 {otpSent && (
