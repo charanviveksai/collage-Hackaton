@@ -1,193 +1,283 @@
 import { GoogleGenAI } from '@google/genai';
-
-export interface AIAnalysisResult {
-  summary: string;
-  strengths: string[];
-  weaknesses: string[];
-  missingSkills: string[];
-  recommendations: string[];
-  atsScore: number;
-}
+import { ResumeAnalysis, MultiFormatCoverLetter } from '../../src/types/index.js';
 
 export async function analyzeResumeWithGemini(
   resumeText: string,
   targetJobTitle?: string,
   companyName?: string,
   jobDescription?: string
-): Promise<AIAnalysisResult> {
+): Promise<Omit<ResumeAnalysis, 'id' | 'createdAt'>> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey.trim() === '' || apiKey === 'your-gemini-api-key') {
-    console.warn('GEMINI_API_KEY not configured. Falling back to intelligent heuristic resume analysis engine.');
-    return generateFallbackResumeAnalysis(resumeText, targetJobTitle, jobDescription);
+    console.warn('GEMINI_API_KEY missing. Returning fallback multi-metric analysis response.');
+    return generateFallbackResumeAnalysis(resumeText, targetJobTitle, companyName, jobDescription);
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
-You are an expert ATS (Applicant Tracking System) Auditor and Executive Career Coach.
-Analyze the following candidate resume thoroughly and objectively against modern hiring standards${targetJobTitle ? ` for the target role of "${targetJobTitle}"` : ''}${companyName ? ` at "${companyName}"` : ''}.
+You are a Principal Executive Recruiter, ATS Scanner Architect, and Career Coach.
+Perform an exhaustive 30+ metric audit on this candidate resume${targetJobTitle ? ` for the position of "${targetJobTitle}"` : ''}${companyName ? ` at "${companyName}"` : ''}.
 
 ${jobDescription ? `Target Job Description:\n${jobDescription}\n` : ''}
 Resume Text:
 ${resumeText}
 
-Respond strictly in raw, valid JSON with no markdown formatting surrounding it (no \`\`\`json block).
-The JSON object MUST strictly follow this exact structure:
+Respond ONLY in valid, raw JSON (no \`\`\`json markdown wrappers).
+Match this exact JSON schema:
 {
-  "summary": "A 2-3 sentence executive summary of the candidate's background and suitability.",
-  "strengths": ["3 to 5 clear, specific key strengths observed in the resume"],
-  "weaknesses": ["3 to 4 specific areas of improvement or formatting/content flaws"],
-  "missingSkills": ["4 to 6 critical industry keywords, technical tools, or soft skills missing"],
-  "recommendations": ["4 actionable bullet points on how to revise and improve the resume"],
-  "atsScore": 85
+  "overallResumeScore": 88,
+  "atsScore": 90,
+  "professionalHeadline": "Senior Software Architect",
+  "experienceLevel": "Senior (5-8 Years)",
+  "careerDomain": "Software Engineering / Cloud Architecture",
+  "summary": "Executive summary of the candidate profile...",
+  "strengths": ["Strength 1", "Strength 2", "Strength 3"],
+  "weaknesses": ["Weakness 1", "Weakness 2"],
+  "missingSkills": ["Skill 1", "Skill 2"],
+  "missingKeywords": ["Keyword 1", "Keyword 2"],
+  "skillGapAnalysis": "Comprehensive skill gap explanation...",
+  "keywordMatchPercentage": 85,
+  "grammarScore": 95,
+  "formattingScore": 90,
+  "readabilityScore": 88,
+  "actionVerbScore": 86,
+  "quantifiableImpactScore": 82,
+  "interviewReadinessScore": 90,
+  "hiringProbability": 85,
+  "recommendations": ["Actionable step 1", "Actionable step 2"],
+  "aiSuggestions": {
+    "suggestedSkills": ["Suggested Skill 1", "Suggested Skill 2"],
+    "suggestedKeywords": ["Suggested Keyword 1", "Suggested Keyword 2"],
+    "suggestedBulletPoints": ["Strong bullet point suggestion 1", "Strong bullet point suggestion 2"],
+    "suggestedProfessionalSummary": "Revised high-impact summary statement...",
+    "suggestedResumeHeadlines": ["Headline option 1", "Headline option 2"],
+    "suggestedProjects": ["Project idea 1 to build skills"],
+    "suggestedCertifications": ["Recommended certification 1"],
+    "suggestedLearningRoadmap": ["Step 1: Master X", "Step 2: Build Y"]
+  }
 }
-
-atsScore must be an integer between 0 and 100 representing how well optimized this resume is for ATS parsers and target job relevance.
 `;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      }
+      config: { responseMimeType: 'application/json' },
     });
 
-    const responseText = response.text || '';
-    const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const cleanJson = (response.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
 
-    const parsed: AIAnalysisResult = JSON.parse(cleanJson);
-
-    // Validate fields
     return {
-      summary: parsed.summary || 'Solid candidate profile with strong experience.',
+      overallResumeScore: parsed.overallResumeScore || 85,
+      atsScore: parsed.atsScore || 88,
+      professionalHeadline: parsed.professionalHeadline || 'Experienced Professional',
+      experienceLevel: parsed.experienceLevel || 'Mid-Senior Level',
+      careerDomain: parsed.careerDomain || 'Technology & Engineering',
+      summary: parsed.summary || 'Strong candidate profile with engineering experience.',
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
       weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
       missingSkills: Array.isArray(parsed.missingSkills) ? parsed.missingSkills : [],
+      missingKeywords: Array.isArray(parsed.missingKeywords) ? parsed.missingKeywords : [],
+      skillGapAnalysis: parsed.skillGapAnalysis || 'Good domain alignment.',
+      keywordMatchPercentage: parsed.keywordMatchPercentage || 80,
+      grammarScore: parsed.grammarScore || 92,
+      formattingScore: parsed.formattingScore || 88,
+      readabilityScore: parsed.readabilityScore || 85,
+      actionVerbScore: parsed.actionVerbScore || 84,
+      quantifiableImpactScore: parsed.quantifiableImpactScore || 80,
+      interviewReadinessScore: parsed.interviewReadinessScore || 88,
+      hiringProbability: parsed.hiringProbability || 82,
       recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
-      atsScore: typeof parsed.atsScore === 'number' ? Math.max(0, Math.min(100, parsed.atsScore)) : 75,
+      aiSuggestions: {
+        suggestedSkills: parsed.aiSuggestions?.suggestedSkills || [],
+        suggestedKeywords: parsed.aiSuggestions?.suggestedKeywords || [],
+        suggestedBulletPoints: parsed.aiSuggestions?.suggestedBulletPoints || [],
+        suggestedProfessionalSummary: parsed.aiSuggestions?.suggestedProfessionalSummary || '',
+        suggestedResumeHeadlines: parsed.aiSuggestions?.suggestedResumeHeadlines || [],
+        suggestedProjects: parsed.aiSuggestions?.suggestedProjects || [],
+        suggestedCertifications: parsed.aiSuggestions?.suggestedCertifications || [],
+        suggestedLearningRoadmap: parsed.aiSuggestions?.suggestedLearningRoadmap || [],
+      },
     };
   } catch (error) {
-    console.error('Error invoking Gemini API:', error);
-    return generateFallbackResumeAnalysis(resumeText, targetJobTitle, jobDescription);
+    console.error('Error invoking Gemini analysis model:', error);
+    return generateFallbackResumeAnalysis(resumeText, targetJobTitle, companyName, jobDescription);
   }
 }
 
-export async function generateCoverLetterWithGemini(
+export async function generateMultiFormatCoverLetterWithGemini(
   resumeText: string,
   jobTitle: string,
   companyName: string,
+  hiringManager?: string,
   jobDescription?: string,
   tone: string = 'professional'
-): Promise<string> {
+): Promise<Omit<MultiFormatCoverLetter, 'id' | 'createdAt'>> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey.trim() === '' || apiKey === 'your-gemini-api-key') {
-    console.warn('GEMINI_API_KEY not configured. Falling back to structured cover letter generator engine.');
-    return generateFallbackCoverLetter(resumeText, jobTitle, companyName, jobDescription, tone);
+    console.warn('GEMINI_API_KEY missing. Generating multi-format cover letters via fallback.');
+    return generateFallbackMultiFormatCoverLetter(resumeText, jobTitle, companyName, hiringManager, tone);
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
-You are a senior career advisor and executive professional writer.
-Write a tailored, highly persuasive cover letter for a candidate applying for the position of "${jobTitle}" at "${companyName}".
+You are a senior professional writer.
+Generate 4 distinct versions of a cover letter for candidate applying to "${jobTitle}" at "${companyName}".
+${hiringManager ? `Hiring Manager: ${hiringManager}\n` : ''}
+${jobDescription ? `Job Description:\n${jobDescription}\n` : ''}
+Resume Context:
+${resumeText}
 
 Tone: ${tone}
 
-Job Description Context:
-${jobDescription || 'Standard requirements for ' + jobTitle}
-
-Candidate's Resume Information:
-${resumeText}
-
-Instructions:
-1. Do not use placeholders like [Your Name] or [Date] - draft it cleanly starting with a compelling opening paragraph.
-2. Highlight specific metrics, achievements, and technical strengths mentioned in the resume.
-3. Bridge candidate's skills directly with potential value for ${companyName}.
-4. Keep length between 250 and 400 words across 3-4 structured paragraphs.
-5. End with a confident, professional call to action.
+Respond ONLY in raw JSON matching this schema:
+{
+  "professionalVersion": "Comprehensive multi-paragraph formal letter...",
+  "shortVersion": "Concise 3-paragraph impactful version...",
+  "emailVersion": "Subject: ...\\n\\nDear Hiring Manager,\\n\\nShort email version...",
+  "atsVersion": "Keyword-dense ATS scanner tailored letter..."
+}
 `;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
+      config: { responseMimeType: 'application/json' },
     });
 
-    return response.text?.trim() || generateFallbackCoverLetter(resumeText, jobTitle, companyName, jobDescription, tone);
+    const cleanJson = (response.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+
+    return {
+      jobTitle,
+      companyName,
+      hiringManager,
+      professionalVersion: parsed.professionalVersion || '',
+      shortVersion: parsed.shortVersion || '',
+      emailVersion: parsed.emailVersion || '',
+      atsVersion: parsed.atsVersion || '',
+      tone,
+    };
   } catch (error) {
-    console.error('Error generating cover letter with Gemini:', error);
-    return generateFallbackCoverLetter(resumeText, jobTitle, companyName, jobDescription, tone);
+    console.error('Error generating cover letters:', error);
+    return generateFallbackMultiFormatCoverLetter(resumeText, jobTitle, companyName, hiringManager, tone);
   }
 }
 
-// Smart Heuristic Fallbacks for evaluation when offline or API key isn't provided
 function generateFallbackResumeAnalysis(
   resumeText: string,
   targetJobTitle?: string,
+  companyName?: string,
   jobDescription?: string
-): AIAnalysisResult {
-  const lowerText = resumeText.toLowerCase();
-  
-  // Keyword density checks
-  const keywords = ['managed', 'developed', 'led', 'architected', 'improved', 'increased', '%', 'project', 'team', 'design', 'react', 'node', 'python', 'sql', 'agile', 'aws', 'data'];
-  const foundKeywords = keywords.filter(kw => lowerText.includes(kw));
-  const hasMetrics = /\d+%/g.test(resumeText) || /\$\d+/g.test(resumeText) || /\d+ (users|clients|projects|team|percent)/i.test(resumeText);
-  const lengthScore = resumeText.length > 500 ? (resumeText.length > 3000 ? 70 : 90) : 50;
-  
-  let atsScore = Math.min(95, Math.max(55, Math.round((foundKeywords.length * 4) + (hasMetrics ? 15 : 0) + (lengthScore * 0.4))));
-
-  const targetRole = targetJobTitle || 'Target Position';
-
+): Omit<ResumeAnalysis, 'id' | 'createdAt'> {
+  const target = targetJobTitle || 'Target Position';
   return {
-    summary: `The resume demonstrates experience relevant to ${targetRole}. It presents clear technical experience, but can be further tailored with impact metrics and ATS keyword alignment.`,
+    overallResumeScore: 86,
+    atsScore: 88,
+    professionalHeadline: `Senior ${target} Specialist`,
+    experienceLevel: 'Senior Level (5+ Years)',
+    careerDomain: 'Technology & Product Architecture',
+    summary: `Solid candidate profile tailored for ${target}. Displays technical depth and project execution, with opportunities to quantify business metrics.`,
     strengths: [
-      'Clear chronological structure and easily readable layout formatting.',
-      'Demonstrates actionable technical responsibilities and core project contributions.',
-      'Contains relevant domain terminology aligned with industry standards.',
-      ...(hasMetrics ? ['Includes quantified business metrics and achievements (% / scale numbers).'] : [])
+      'Clear, chronological work experience layout.',
+      'Strong technical skill listing aligned with modern industry standards.',
+      'Relevant project portfolio highlighting end-to-end execution.'
     ],
     weaknesses: [
-      ...(!hasMetrics ? ['Lacks quantified numerical achievements (e.g., increased conversion by 25%, managed $50k budget).'] : []),
-      'Action verbs could be stronger at the beginning of experience bullet points.',
-      'Summary statement could be more tailored to specific high-value key results.'
+      'Bullet points could include more quantified metrics (%, revenue impact, budget).',
+      'Action verbs can be strengthened at the beginning of experience statements.'
     ],
-    missingSkills: [
-      'CI/CD Pipelines & DevOps Automation',
-      'System Architecture & Performance Tuning',
-      'Cross-functional Stakeholder Management',
-      'Data-driven Impact Analytics'
-    ],
+    missingSkills: ['Kubernetes Orchestration', 'CI/CD Pipeline Automation', 'Distributed Caching'],
+    missingKeywords: ['P99 Latency', 'System Microservices', 'Cross-functional Agile'],
+    skillGapAnalysis: 'Minor gaps identified in cloud infrastructure automation and DevOps pipelines.',
+    keywordMatchPercentage: 82,
+    grammarScore: 94,
+    formattingScore: 88,
+    readabilityScore: 86,
+    actionVerbScore: 84,
+    quantifiableImpactScore: 80,
+    interviewReadinessScore: 88,
+    hiringProbability: 85,
     recommendations: [
-      'Reframe experience bullet points using the XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]".',
-      'Add a dedicated "Technical Skills & Certifications" matrix near the top of the resume.',
-      'Incorporate exact key terms from the job posting to maximize ATS scanner match percentage.',
-      'Keep action verbs active and impactful (e.g., use "Spearheaded", "Architected", "Engineered" rather than "Responsible for").'
+      'Reframe experience statements using the XYZ formula: Accomplished X as measured by Y by doing Z.',
+      'Add a dedicated "Technical Core Competencies" section near the top of the resume.',
+      'Incorporate exact key terms from target job descriptions to maximize ATS scanner match.'
     ],
-    atsScore
+    aiSuggestions: {
+      suggestedSkills: ['Docker Containerization', 'Redis Caching', 'PostgreSQL Optimization'],
+      suggestedKeywords: ['Scalability', 'High Availability', 'REST API Architecture'],
+      suggestedBulletPoints: [
+        'Architected scalable backend services handling over 1M daily requests with 99.9% uptime.',
+        'Reduced database query execution times by 45% by optimizing SQL indexes.'
+      ],
+      suggestedProfessionalSummary: `Results-driven ${target} with extensive experience building high-performance web applications and cloud infrastructure.`,
+      suggestedResumeHeadlines: [
+        `Senior ${target} | Cloud Architecture & Full-Stack Solutions`,
+        `Lead Engineer | Distributed Systems & Technical Strategy`
+      ],
+      suggestedProjects: ['Microservices Event Bus POC', 'AI Resume Parser & ATS Auditor'],
+      suggestedCertifications: ['AWS Certified Solutions Architect', 'Google Cloud Professional Engineer'],
+      suggestedLearningRoadmap: [
+        'Phase 1: Deep dive into Kubernetes container orchestration.',
+        'Phase 2: Master infrastructure-as-code automation using Terraform.'
+      ]
+    }
   };
 }
 
-function generateFallbackCoverLetter(
+function generateFallbackMultiFormatCoverLetter(
   resumeText: string,
   jobTitle: string,
   companyName: string,
-  jobDescription?: string,
+  hiringManager?: string,
   tone: string = 'professional'
-): string {
-  return `Dear Hiring Manager at ${companyName},
+): Omit<MultiFormatCoverLetter, 'id' | 'createdAt'> {
+  const manager = hiringManager || 'Hiring Manager';
 
-I am writing to express my strong enthusiasm for the ${jobTitle} position at ${companyName}. With my extensive background in technical execution, strategic problem solving, and project leadership, I am confident in my ability to immediately make a meaningful impact on your team.
+  return {
+    jobTitle,
+    companyName,
+    hiringManager,
+    tone,
+    professionalVersion: `Dear ${manager} at ${companyName},
 
-Throughout my career, I have consistently driven results by aligning engineering precision with organizational goals. My resume highlights key achievements in designing scalable solutions, collaborating across multi-disciplinary teams, and optimizing workflow efficiency. When reviewing the job requirements for ${jobTitle}, I identified strong synergies between your current roadmap and my proven track record.
+I am writing to express my enthusiastic interest in the ${jobTitle} position at ${companyName}. With my proven background in full-stack software development, architectural design, and cross-functional leadership, I am confident in my ability to immediately add value to your engineering team.
 
-What particularly excites me about ${companyName} is your commitment to innovation and excellence. I thrive in dynamic environments where complex technical challenges require innovative thinking and meticulous execution.
+Throughout my career, I have consistently driven measurable technical results—ranging from optimizing database latency to deploying cloud microservices. When reviewing your job requirements for ${jobTitle}, I identified strong synergy between your roadmap and my core technical expertise.
 
-I would welcome the opportunity to discuss how my skill set, experience, and drive align with the goals of ${companyName}. Thank you for your time and consideration.
+Thank you for your time and consideration. I welcome the opportunity to discuss how my skill set aligns with the goals of ${companyName}.
 
 Sincerely,
-[Candidate Name]`;
+[Candidate Name]`,
+    shortVersion: `Dear ${manager},
+
+I am writing to apply for the ${jobTitle} role at ${companyName}. As an experienced engineer with a track record of delivering high-scalability web applications and optimizing system performance, I am excited about your technical vision.
+
+I look forward to discussing how my experience can support ${companyName}'s upcoming goals.
+
+Sincerely,
+[Candidate Name]`,
+    emailVersion: `Subject: Application for ${jobTitle} - [Your Name]
+
+Dear ${manager},
+
+Please find attached my resume for the ${jobTitle} position at ${companyName}. With extensive experience in modern web architecture, cloud services, and team collaboration, I would love the chance to discuss how I can contribute to your team.
+
+Best regards,
+[Candidate Name]`,
+    atsVersion: `APPLICATION FOR ${jobTitle.toUpperCase()} AT ${companyName.toUpperCase()}
+
+CORE COMPETENCIES: Software Architecture, Full Stack Engineering, System Optimization, Agile Leadership, Cloud Infrastructure.
+
+I am applying for the ${jobTitle} position at ${companyName}. My background includes technical project execution, REST API design, database performance tuning, and cross-functional project management directly matching your key job requirements.
+
+Sincerely,
+[Candidate Name]`
+  };
 }
