@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchUserHistoryApi } from '../lib/api';
-import { ResumeAnalysis, CoverLetterRecord } from '../types';
+import { fetchDashboardMetricsApi, fetchUserHistoryApi } from '../lib/api';
+import { DashboardMetrics, ResumeAnalysis, MultiFormatCoverLetter } from '../types';
 import { 
   BarChart3, 
   FileText, 
@@ -13,36 +13,36 @@ import {
   CheckCircle2, 
   TrendingUp, 
   Clock, 
+  Award, 
   Target 
 } from 'lucide-react';
 import { ATSScoreGauge } from '../components/ATSScoreGauge';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [analyses, setAnalyses] = useState<ResumeAnalysis[]>([]);
-  const [coverLetters, setCoverLetters] = useState<CoverLetterRecord[]>([]);
+  const [coverLetters, setCoverLetters] = useState<MultiFormatCoverLetter[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const data = await fetchUserHistoryApi(user?.id);
-        setAnalyses(data.analyses);
-        setCoverLetters(data.coverLetters);
+        const [metData, histData] = await Promise.all([
+          fetchDashboardMetricsApi(user?.id),
+          fetchUserHistoryApi(user?.id),
+        ]);
+        setMetrics(metData);
+        setAnalyses(histData.analyses);
+        setCoverLetters(histData.coverLetters);
       } catch (err) {
-        console.error('Failed to load user history:', err);
+        console.error('Failed to load dashboard metrics:', err);
       } finally {
         setLoading(false);
       }
     }
     loadData();
   }, [user]);
-
-  const totalScans = analyses.length;
-  const avgScore = totalScans > 0
-    ? Math.round(analyses.reduce((acc, a) => acc + a.atsScore, 0) / totalScans)
-    : 0;
-  const totalCoverLetters = coverLetters.length;
 
   const recentAnalysis = analyses.length > 0 ? analyses[0] : null;
 
@@ -57,7 +57,7 @@ export const DashboardPage: React.FC = () => {
               Welcome back, <span className="gradient-text">{user?.fullName || 'Professional'}</span>
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm mt-1">
-              Here is your AI resume optimization overview and career document activity.
+              AI-driven career document optimization overview & performance analytics.
             </p>
           </div>
 
@@ -75,52 +75,48 @@ export const DashboardPage: React.FC = () => {
               className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 font-semibold rounded-xl text-xs flex items-center space-x-2 transition-colors"
             >
               <Mail className="w-4 h-4 text-brand-400" />
-              <span>Generate Cover Letter</span>
+              <span>Generate Cover Letters</span>
             </Link>
           </div>
         </div>
 
-        {/* METRIC CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* EXPANDED DASHBOARD METRIC CARDS */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           
-          <div className="p-6 rounded-2xl glass-panel border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold uppercase tracking-wider">Total Scans</span>
-              <FileText className="w-5 h-5 text-brand-400" />
-            </div>
-            <p className="text-3xl font-black text-white">{totalScans}</p>
-            <p className="text-[11px] text-slate-400 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3 text-emerald-400" /> Analyzed & Saved
-            </p>
+          <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Resumes</span>
+            <p className="text-2xl font-black text-white">{metrics?.totalResumes || 0}</p>
+            <p className="text-[10px] text-slate-500">Parsed & Stored</p>
           </div>
 
-          <div className="p-6 rounded-2xl glass-panel border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold uppercase tracking-wider">Average ATS Score</span>
-              <BarChart3 className="w-5 h-5 text-emerald-400" />
-            </div>
-            <p className="text-3xl font-black text-emerald-400">{avgScore > 0 ? `${avgScore}/100` : 'N/A'}</p>
-            <p className="text-[11px] text-slate-400 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Target role match average
-            </p>
+          <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Analyses</span>
+            <p className="text-2xl font-black text-brand-400">{metrics?.totalAnalyses || 0}</p>
+            <p className="text-[10px] text-slate-500">AI Audits Run</p>
           </div>
 
-          <div className="p-6 rounded-2xl glass-panel border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold uppercase tracking-wider">Cover Letters</span>
-              <Mail className="w-5 h-5 text-purple-400" />
-            </div>
-            <p className="text-3xl font-black text-purple-400">{totalCoverLetters}</p>
-            <p className="text-[11px] text-slate-400">Custom tailored drafts</p>
+          <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Avg ATS Score</span>
+            <p className="text-2xl font-black text-emerald-400">{metrics?.avgAtsScore ? `${metrics.avgAtsScore}` : 'N/A'}</p>
+            <p className="text-[10px] text-slate-500">Target Match Avg</p>
           </div>
 
-          <div className="p-6 rounded-2xl glass-panel border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-semibold uppercase tracking-wider">AI Engine</span>
-              <Sparkles className="w-5 h-5 text-amber-400" />
-            </div>
-            <p className="text-3xl font-black text-amber-400">Gemini 2.5</p>
-            <p className="text-[11px] text-slate-400">Latest structural models</p>
+          <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Highest Score</span>
+            <p className="text-2xl font-black text-emerald-300">{metrics?.highestAtsScore ? `${metrics.highestAtsScore}` : 'N/A'}</p>
+            <p className="text-[10px] text-slate-500">Peak ATS Record</p>
+          </div>
+
+          <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Lowest Score</span>
+            <p className="text-2xl font-black text-amber-400">{metrics?.lowestAtsScore ? `${metrics.lowestAtsScore}` : 'N/A'}</p>
+            <p className="text-[10px] text-slate-500">Baseline Audit</p>
+          </div>
+
+          <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Cover Letters</span>
+            <p className="text-2xl font-black text-purple-400">{metrics?.coverLettersCount || 0}</p>
+            <p className="text-[10px] text-slate-500">Drafts Created</p>
           </div>
 
         </div>
@@ -144,14 +140,14 @@ export const DashboardPage: React.FC = () => {
             {loading ? (
               <div className="p-12 text-center text-slate-400 glass-panel rounded-2xl">
                 <div className="w-6 h-6 border-2 border-brand-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                Loading your analysis history...
+                Loading analytics data...
               </div>
             ) : analyses.length === 0 ? (
               <div className="p-12 text-center glass-panel rounded-2xl border border-slate-800 space-y-4">
                 <FileText className="w-12 h-12 text-slate-600 mx-auto" />
                 <div>
                   <h3 className="text-base font-semibold text-white">No resume analyses yet</h3>
-                  <p className="text-xs text-slate-400 mt-1">Upload your first resume to get your ATS Score & detailed recommendations.</p>
+                  <p className="text-xs text-slate-400 mt-1">Upload your resume to receive a detailed 30+ metric ATS audit.</p>
                 </div>
                 <Link
                   to="/resume/new"
@@ -171,7 +167,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
                         <span className="font-bold text-white text-base">
-                          {item.targetJobTitle || 'General Software Resume'}
+                          {item.targetJobTitle || 'Software Resume Audit'}
                         </span>
                         {item.companyName && (
                           <span className="text-xs px-2 py-0.5 bg-slate-800 text-slate-300 rounded-md border border-slate-700">
@@ -180,9 +176,11 @@ export const DashboardPage: React.FC = () => {
                         )}
                       </div>
                       <p className="text-xs text-slate-400 line-clamp-1">{item.summary}</p>
-                      <p className="text-[11px] text-slate-500">
-                        {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
+                      <div className="flex items-center space-x-4 text-[11px] text-slate-500 pt-1">
+                        <span>Readability: {item.readabilityScore}%</span>
+                        <span>Interview Readiness: {item.interviewReadinessScore}%</span>
+                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
 
                     <div className="flex items-center space-x-4 shrink-0">
@@ -195,7 +193,7 @@ export const DashboardPage: React.FC = () => {
                         to={`/analysis/${item.id}`}
                         className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-xs transition-colors flex items-center space-x-1"
                       >
-                        <span>View Details</span>
+                        <span>Report</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
@@ -231,7 +229,7 @@ export const DashboardPage: React.FC = () => {
                   {coverLetters.slice(0, 3).map((cl) => (
                     <div key={cl.id} className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-xs space-y-1">
                       <p className="font-semibold text-slate-200">{cl.jobTitle} at {cl.companyName}</p>
-                      <p className="text-slate-400 line-clamp-2 text-[11px] font-mono">{cl.content}</p>
+                      <p className="text-slate-400 line-clamp-2 text-[11px] font-mono">{cl.professionalVersion || cl.shortVersion}</p>
                     </div>
                   ))}
                 </div>
