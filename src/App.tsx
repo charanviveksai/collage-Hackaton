@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 
-import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { NewResumePage } from './pages/NewResumePage';
@@ -12,6 +11,7 @@ import { AnalysisDetailPage } from './pages/AnalysisDetailPage';
 import { CoverLetterGeneratorPage } from './pages/CoverLetterGeneratorPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { LandingPage } from './pages/LandingPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -32,14 +32,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 export const AppContent: React.FC = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-brand-500 selection:text-white">
       <Navbar />
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          {/* Open Sign In page as default landing if not logged in */}
+          <Route
+            path="/"
+            element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />}
+          />
+
           <Route path="/login" element={<AuthPage />} />
           <Route path="/register" element={<AuthPage />} />
+          <Route path="/product" element={<LandingPage />} />
 
           <Route
             path="/dashboard"
@@ -95,7 +103,7 @@ export const AppContent: React.FC = () => {
             }
           />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </main>
       <Footer />
