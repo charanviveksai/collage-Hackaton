@@ -32,6 +32,7 @@ app.use('/api/cover-letter', aiLimiter);
 
 // API Routes
 app.use('/api/resume', resumeRoutes);
+app.use('/api/resume', analyzeRoutes);
 app.use('/api', analyzeRoutes);
 app.use('/api', coverLetterRoutes);
 app.use('/api', historyRoutes);
