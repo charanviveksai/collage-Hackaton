@@ -396,6 +396,34 @@ export const AuthPage: React.FC = () => {
             </div>
 
             <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Worldwide International)</label>
+              <div className="flex gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="w-1/3 py-2.5 px-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.code} value={c.code} className="bg-slate-900 text-slate-200">
+                      {c.code} ({c.country})
+                    </option>
+                  ))}
+                </select>
+
+                <div className="relative flex-1">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="tel"
+                    value={rawPhone}
+                    onChange={(e) => setRawPhone(e.target.value)}
+                    placeholder="1234567890"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-semibold text-slate-300">Password *</label>
                 {mode === 'login' && (
