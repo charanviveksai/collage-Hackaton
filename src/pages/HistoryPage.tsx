@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchUserHistoryApi } from '../lib/api';
-import { ResumeAnalysis, CoverLetterRecord } from '../types';
+import { ResumeAnalysis, MultiFormatCoverLetter } from '../types';
 import { 
   History as HistoryIcon, 
   FileText, 
@@ -18,7 +18,7 @@ export const HistoryPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'analyses' | 'coverLetters'>('analyses');
   const [analyses, setAnalyses] = useState<ResumeAnalysis[]>([]);
-  const [coverLetters, setCoverLetters] = useState<CoverLetterRecord[]>([]);
+  const [coverLetters, setCoverLetters] = useState<MultiFormatCoverLetter[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -48,7 +48,7 @@ export const HistoryPage: React.FC = () => {
     (c) =>
       c.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.content.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.professionalVersion || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -188,13 +188,13 @@ export const HistoryPage: React.FC = () => {
                   </div>
 
                   <p className="text-xs text-slate-300 font-mono line-clamp-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                    {cl.content}
+                    {cl.professionalVersion || cl.shortVersion}
                   </p>
 
                   <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1">
                     <span>Generated {new Date(cl.createdAt).toLocaleDateString()}</span>
                     <button
-                      onClick={() => navigator.clipboard.writeText(cl.content)}
+                      onClick={() => navigator.clipboard.writeText(cl.professionalVersion || cl.shortVersion)}
                       className="text-xs text-brand-400 hover:underline font-semibold"
                     >
                       Copy Content
