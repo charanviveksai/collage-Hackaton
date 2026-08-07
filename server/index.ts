@@ -7,6 +7,7 @@ import resumeRoutes from './routes/resume.js';
 import analyzeRoutes from './routes/analyze.js';
 import coverLetterRoutes from './routes/coverLetter.js';
 import historyRoutes from './routes/history.js';
+import authRoutes from './routes/auth.js';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use('/api/resume/analyze', aiLimiter);
 app.use('/api/cover-letter', aiLimiter);
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/resume', analyzeRoutes);
 app.use('/api', analyzeRoutes);
