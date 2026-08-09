@@ -8,6 +8,9 @@ import analyzeRoutes from './routes/analyze.js';
 import coverLetterRoutes from './routes/coverLetter.js';
 import historyRoutes from './routes/history.js';
 import authRoutes from './routes/auth.js';
+import cvRoutes from './routes/cv.js';
+import jobRoutes from './routes/jobs.js';
+import applicationKitRoutes from './routes/applicationKit.js';
 
 dotenv.config();
 
@@ -34,9 +37,14 @@ app.use('/api/cover-letter', aiLimiter);
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/resumes', resumeRoutes);
 app.use('/api/resume', analyzeRoutes);
 app.use('/api', analyzeRoutes);
 app.use('/api', coverLetterRoutes);
+app.use('/api/cover-letters', coverLetterRoutes);
+app.use('/api/cvs', cvRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/application-kit', applicationKitRoutes);
 app.use('/api', historyRoutes);
 
 // Health check endpoint
