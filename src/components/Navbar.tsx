@@ -182,15 +182,9 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
                   className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 rounded-xl shadow-lg shadow-brand-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  Get Started
+                  Sign In
                 </Link>
               </div>
             )}
