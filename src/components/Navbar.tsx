@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ToolsButton } from './ToolsButton';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -45,6 +46,8 @@ export const Navbar: React.FC = () => {
           {/* Navigation Links */}
           {user ? (
             <div className="hidden md:flex items-center space-x-1">
+              <ToolsButton />
+
               <Link
                 to="/dashboard"
                 className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
