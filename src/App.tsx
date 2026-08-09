@@ -6,9 +6,15 @@ import { Footer } from './components/Footer';
 
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { NewResumePage } from './pages/NewResumePage';
+import { ToolsPage } from './pages/ToolsPage';
+import { ResumeInputPage } from './pages/ResumeInputPage';
+import { ResumeEditorPage } from './pages/ResumeEditorPage';
+import { CVInputPage } from './pages/CVInputPage';
+import { CVEditorPage } from './pages/CVEditorPage';
 import { AnalysisDetailPage } from './pages/AnalysisDetailPage';
 import { CoverLetterGeneratorPage } from './pages/CoverLetterGeneratorPage';
+import { ApplicationKitPage } from './pages/ApplicationKitPage';
+import { ApplicationKitDetailPage } from './pages/ApplicationKitDetailPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { LandingPage } from './pages/LandingPage';
@@ -39,7 +45,6 @@ export const AppContent: React.FC = () => {
       <Navbar />
       <main className="flex-1">
         <Routes>
-          {/* Open Sign In page as default landing if not logged in */}
           <Route
             path="/"
             element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />}
@@ -58,11 +63,88 @@ export const AppContent: React.FC = () => {
             }
           />
 
+          {/* Tools Routes */}
+          <Route
+            path="/tools"
+            element={
+              <ProtectedRoute>
+                <ToolsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tools/resume"
+            element={
+              <ProtectedRoute>
+                <ResumeInputPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools/resume/input"
+            element={
+              <ProtectedRoute>
+                <ResumeInputPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools/resume/editor"
+            element={
+              <ProtectedRoute>
+                <ResumeEditorPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tools/cv"
+            element={
+              <ProtectedRoute>
+                <CVInputPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools/cv/input"
+            element={
+              <ProtectedRoute>
+                <CVInputPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools/cv/editor"
+            element={
+              <ProtectedRoute>
+                <CVEditorPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tools/cover-letter"
+            element={
+              <ProtectedRoute>
+                <CoverLetterGeneratorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools/cover-letter/input"
+            element={
+              <ProtectedRoute>
+                <CoverLetterGeneratorPage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/resume/new"
             element={
               <ProtectedRoute>
-                <NewResumePage />
+                <ResumeInputPage />
               </ProtectedRoute>
             }
           />
@@ -81,6 +163,24 @@ export const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <CoverLetterGeneratorPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Application Kit Routes */}
+          <Route
+            path="/application-kit"
+            element={
+              <ProtectedRoute>
+                <ApplicationKitPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/application-kit/:id"
+            element={
+              <ProtectedRoute>
+                <ApplicationKitDetailPage />
               </ProtectedRoute>
             }
           />
