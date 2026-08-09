@@ -11,8 +11,7 @@ import {
   AlertCircle, 
   CheckCircle2, 
   ShieldAlert,
-  ArrowLeft,
-  Globe
+  ArrowLeft
 } from 'lucide-react';
 
 const COUNTRY_CODES = [
@@ -41,19 +40,19 @@ export const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, register, resetPasswordByEmail, resetPasswordByPhone, verifyPhoneOtp, isDemo } = useAuth();
 
-  const isRegisterInitial = location.pathname === '/register';
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
 
   // Login / Register fields
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+1');
+  const [rawPhone, setRawPhone] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
   // Forgot password fields
   const [recoveryMethod, setRecoveryMethod] = useState<'email' | 'phone'>('email');
   const [recoveryEmail, setRecoveryEmail] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
-  const [rawPhone, setRawPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -63,6 +62,7 @@ export const AuthPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const fullPhoneNumber = `${countryCode}${rawPhone.trim().replace(/^[+0]+/, '')}`;
+  const activeIdentifier = authMethod === 'email' ? email : fullPhoneNumber;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +71,23 @@ export const AuthPage: React.FC = () => {
     setSubmitting(true);
 
     try {
+      if (authMethod === 'email' && !email.trim()) {
+        setErrorMsg('Please enter your email address.');
+        setSubmitting(false);
+        return;
+      }
+
+      if (authMethod === 'phone' && !rawPhone.trim()) {
+        setErrorMsg('Please enter your phone number.');
+        setSubmitting(false);
+        return;
+      }
+
       if (mode === 'register') {
-        await register(email, password, fullName);
+        await register(activeIdentifier, password, fullName);
         navigate('/dashboard');
       } else if (mode === 'login') {
-        await login(email, password);
+        await login(activeIdentifier, password);
         navigate('/dashboard');
       }
     } catch (err: any) {
@@ -134,6 +146,7 @@ export const AuthPage: React.FC = () => {
   };
 
   const fillDemoCredentials = () => {
+    setAuthMethod('email');
     setEmail('alex.developer@example.com');
     setPassword('DemoPass123!');
     setFullName('Alex Vance');
@@ -380,48 +393,89 @@ export const AuthPage: React.FC = () => {
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address *</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"
-                />
+            {/* Email or Phone Method Selector */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-300">Sign In Method: Email Address or Phone Number</label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod('email');
+                    setErrorMsg(null);
+                  }}
+                  className={`py-2 text-xs font-semibold rounded-lg flex items-center justify-center space-x-1.5 transition-colors ${
+                    authMethod === 'email'
+                      ? 'bg-brand-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Email Address</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod('phone');
+                    setErrorMsg(null);
+                  }}
+                  className={`py-2 text-xs font-semibold rounded-lg flex items-center justify-center space-x-1.5 transition-colors ${
+                    authMethod === 'phone'
+                      ? 'bg-brand-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Phone Number</span>
+                </button>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Worldwide International)</label>
-              <div className="flex gap-2">
-                <select
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  className="w-1/3 py-2.5 px-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
-                >
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={c.code} value={c.code} className="bg-slate-900 text-slate-200">
-                      {c.code} ({c.country})
-                    </option>
-                  ))}
-                </select>
-
-                <div className="relative flex-1">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            {authMethod === 'email' ? (
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address *</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
-                    type="tel"
-                    value={rawPhone}
-                    onChange={(e) => setRawPhone(e.target.value)}
-                    placeholder="1234567890"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"
                   />
                 </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Worldwide International) *</label>
+                <div className="flex gap-2">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="w-1/3 py-2.5 px-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code} className="bg-slate-900 text-slate-200">
+                        {c.code} ({c.country})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="relative flex-1">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      type="tel"
+                      required
+                      value={rawPhone}
+                      onChange={(e) => setRawPhone(e.target.value)}
+                      placeholder="1234567890"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1">
